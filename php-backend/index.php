@@ -5,6 +5,8 @@
  */
 
 error_reporting(E_ALL);
+require_once __DIR__ . '/helpers/RequestContext.php';
+
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/error.log');
@@ -13,6 +15,11 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+$requestStartTime = microtime(true);
+$traceId = bin2hex(random_bytes(8));
+header('X-Trace-Id: ' . $traceId);
+RequestContext::setTraceId($traceId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -61,14 +68,38 @@ $queryParams = $_GET;
    RESPONSE HELPER
 ========================= */
 function respond($result) {
+    global $requestStartTime, $method, $path;
+
     $code = $result['code'] ?? 200;
     http_response_code($code);
 
     if (isset($result['error'])) {
-        echo json_encode(['detail' => $result['error']]);
+        $message = $result['error'];
+        $errorCode = $result['error_code'] ?? 'API_ERROR';
+        $fieldErrors = $result['field_errors'] ?? (object) [];
+        echo json_encode([
+            'detail' => $message,
+            'error' => [
+                'code' => $errorCode,
+                'message' => $message,
+                'trace_id' => RequestContext::getTraceId(),
+                'field_errors' => $fieldErrors
+            ]
+        ]);
     } else {
         echo json_encode($result['data']);
     }
+
+    $durationMs = (int) round((microtime(true) - $requestStartTime) * 1000);
+    error_log(json_encode([
+        'type' => 'request_metric',
+        'trace_id' => RequestContext::getTraceId(),
+        'method' => $method,
+        'route' => '/' . trim($path, '/'),
+        'status_code' => $code,
+        'duration_ms' => $durationMs
+    ]));
+
     exit;
 }
 

@@ -26,10 +26,10 @@ class CampaignController {
             $params[] = $filters['campaign_type'];
         }
 
-        $sql = "SELECT c.*, u.full_name as created_by_name 
-                FROM campaigns c 
-                LEFT JOIN users u ON u.id = c.created_by 
-                WHERE " . implode(' AND ', $where) . " 
+        $sql = "SELECT c.*, u.full_name as created_by_name
+                FROM campaigns c
+                LEFT JOIN users u ON u.id = c.created_by
+                WHERE " . implode(' AND ', $where) . "
                 ORDER BY c.created_at DESC";
 
         return ['data' => $this->db->fetchAll($sql, $params), 'code' => 200];
@@ -37,15 +37,15 @@ class CampaignController {
 
     public function getById($id) {
         $campaign = $this->db->fetch(
-            "SELECT c.*, u.full_name as created_by_name 
-             FROM campaigns c 
-             LEFT JOIN users u ON u.id = c.created_by 
+            "SELECT c.*, u.full_name as created_by_name
+             FROM campaigns c
+             LEFT JOIN users u ON u.id = c.created_by
              WHERE c.id = ?",
             [$id]
         );
 
         if (!$campaign) {
-            return ['error' => 'Campaign not found', 'code' => 404];
+            return ['error' => 'Campaign not found', 'code' => 404, 'error_code' => 'CAMPAIGN_NOT_FOUND'];
         }
 
         return ['data' => $campaign, 'code' => 200];
@@ -53,16 +53,22 @@ class CampaignController {
 
     public function create($data, $currentUser) {
         if ($currentUser['role'] !== 'admin') {
-            return ['error' => 'Admin access required', 'code' => 403];
+            return ['error' => 'Admin access required', 'code' => 403, 'error_code' => 'FORBIDDEN'];
         }
 
-        if (empty($data['name'])) {
-            return ['error' => 'Campaign name is required', 'code' => 400];
+        $validation = ApiValidator::validateCampaignPayload($data, false);
+        if (!$validation['valid']) {
+            return [
+                'error' => 'Validation failed',
+                'error_code' => 'VALIDATION_ERROR',
+                'field_errors' => $validation['errors'],
+                'code' => 422
+            ];
         }
 
         $campaignId = $this->db->insert('campaigns', [
             'uuid' => $this->generateUUID(),
-            'name' => $data['name'],
+            'name' => trim($data['name']),
             'description' => $data['description'] ?? '',
             'campaign_type' => $data['campaign_type'] ?? 'progressive',
             'status' => $data['status'] ?? 'active',
@@ -72,12 +78,21 @@ class CampaignController {
             'caller_id' => $data['caller_id'] ?? null,
             'acd_code' => $data['acd_code'] ?? null,
             'call_context' => $data['call_context'] ?? null,
-            'max_dial_time' => $data['max_dial_time'] ?? 60,
-            'pacing' => $data['pacing'] ?? '2.30',
-            'wrap_up_time' => $data['wrap_up_time'] ?? 0,
+            'max_dial_time' => isset($data['max_dial_time']) ? (int) $data['max_dial_time'] : 60,
+            'pacing' => isset($data['pacing']) ? (string) $data['pacing'] : '2.30',
+            'wrap_up_time' => isset($data['wrap_up_time']) ? (int) $data['wrap_up_time'] : 0,
             'script' => $data['script'] ?? null,
             'ivr_no' => $data['ivr_no'] ?? null,
             'created_by' => $currentUser['id']
+        ]);
+
+        AuditLogger::record($currentUser['id'], 'campaign.create', 'campaign', $campaignId, [
+            'name' => $data['name'],
+            'campaign_type' => $data['campaign_type'] ?? 'progressive'
+        ]);
+        EventLogger::record('campaign', $campaignId, 'campaign.created', [
+            'actor_user_id' => $currentUser['id'],
+            'name' => $data['name']
         ]);
 
         return $this->getById($campaignId);
@@ -85,7 +100,22 @@ class CampaignController {
 
     public function update($id, $data, $currentUser) {
         if ($currentUser['role'] !== 'admin') {
-            return ['error' => 'Admin access required', 'code' => 403];
+            return ['error' => 'Admin access required', 'code' => 403, 'error_code' => 'FORBIDDEN'];
+        }
+
+        $existing = $this->db->fetch("SELECT id, name, status FROM campaigns WHERE id = ?", [$id]);
+        if (!$existing) {
+            return ['error' => 'Campaign not found', 'code' => 404, 'error_code' => 'CAMPAIGN_NOT_FOUND'];
+        }
+
+        $validation = ApiValidator::validateCampaignPayload($data, true);
+        if (!$validation['valid']) {
+            return [
+                'error' => 'Validation failed',
+                'error_code' => 'VALIDATION_ERROR',
+                'field_errors' => $validation['errors'],
+                'code' => 422
+            ];
         }
 
         $allowed = ['name', 'description', 'campaign_type', 'status', 'start_date', 'end_date',
@@ -94,24 +124,37 @@ class CampaignController {
         $updateData = array_intersect_key($data, array_flip($allowed));
 
         if (empty($updateData)) {
-            return ['error' => 'No valid fields to update', 'code' => 400];
+            return ['error' => 'No valid fields to update', 'code' => 400, 'error_code' => 'NO_UPDATE_FIELDS'];
         }
 
         $this->db->update('campaigns', $updateData, 'id = :id', ['id' => $id]);
+
+        AuditLogger::record($currentUser['id'], 'campaign.update', 'campaign', $id, [
+            'updated_fields' => array_keys($updateData)
+        ]);
+        EventLogger::record('campaign', $id, 'campaign.updated', [
+            'actor_user_id' => $currentUser['id'],
+            'updated_fields' => array_keys($updateData)
+        ]);
 
         return $this->getById($id);
     }
 
     public function delete($id, $currentUser) {
         if ($currentUser['role'] !== 'admin') {
-            return ['error' => 'Admin access required', 'code' => 403];
+            return ['error' => 'Admin access required', 'code' => 403, 'error_code' => 'FORBIDDEN'];
         }
 
         $result = $this->db->delete('campaigns', 'id = ?', [$id]);
 
         if ($result === 0) {
-            return ['error' => 'Campaign not found', 'code' => 404];
+            return ['error' => 'Campaign not found', 'code' => 404, 'error_code' => 'CAMPAIGN_NOT_FOUND'];
         }
+
+        AuditLogger::record($currentUser['id'], 'campaign.delete', 'campaign', $id);
+        EventLogger::record('campaign', $id, 'campaign.deleted', [
+            'actor_user_id' => $currentUser['id']
+        ]);
 
         return ['data' => ['message' => 'Campaign deleted successfully'], 'code' => 200];
     }

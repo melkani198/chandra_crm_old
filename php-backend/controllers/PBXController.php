@@ -15,22 +15,28 @@ class PBXController {
         $this->pbx = new PBXClient();
     }
 
-    // ==================== AGENT STATUS ====================
-
     public function updateAgentStatus($data, $currentUser) {
-        $action = $data['action'] ?? 'ready';
+        $validation = ApiValidator::validateAgentStatusPayload($data);
+        if (!$validation['valid']) {
+            return [
+                'error' => 'Validation failed',
+                'error_code' => 'VALIDATION_ERROR',
+                'field_errors' => $validation['errors'],
+                'code' => 422
+            ];
+        }
+
+        $action = $data['action'];
         $extension = $data['extension'] ?? $currentUser['extension'];
         $campaignId = $data['campaign_id'] ?? null;
         $breakTypeCode = $data['break_type'] ?? null;
 
-        // Get break type ID if provided
         $breakTypeId = null;
         if ($breakTypeCode) {
             $breakType = $this->db->fetch("SELECT id FROM break_types WHERE code = ?", [$breakTypeCode]);
             $breakTypeId = $breakType['id'] ?? null;
         }
 
-        // Map action to status
         $statusMap = [
             'login' => 'idle',
             'logout' => 'offline',
@@ -43,7 +49,6 @@ class PBXController {
         ];
         $status = $statusMap[$action] ?? 'idle';
 
-        // Update local agent status
         $this->db->query("
             INSERT INTO agent_status (agent_id, status, extension, campaign_id, break_type_id, status_start_time)
             VALUES (?, ?, ?, ?, ?, NOW())
@@ -55,7 +60,6 @@ class PBXController {
                 status_start_time = NOW()
         ", [$currentUser['id'], $status, $extension, $campaignId, $breakTypeId]);
 
-        // Call PBX API
         $pbxResponse = null;
         if ($this->pbx->isConfigured()) {
             switch ($action) {
@@ -80,6 +84,18 @@ class PBXController {
             }
         }
 
+        AuditLogger::record($currentUser['id'], 'agent.status.update', 'agent_status', $currentUser['id'], [
+            'action' => $action,
+            'status' => $status,
+            'campaign_id' => $campaignId
+        ]);
+        EventLogger::record('agent', $currentUser['id'], 'agent.status.updated', [
+            'action' => $action,
+            'status' => $status,
+            'campaign_id' => $campaignId,
+            'extension' => $extension
+        ]);
+
         return ['data' => [
             'message' => 'Status updated',
             'status' => $status,
@@ -87,20 +103,23 @@ class PBXController {
         ], 'code' => 200];
     }
 
-    // ==================== DIALING ====================
-
     public function dial($data, $currentUser) {
+        $validation = ApiValidator::validateDialPayload($data);
+        if (!$validation['valid']) {
+            return [
+                'error' => 'Validation failed',
+                'error_code' => 'VALIDATION_ERROR',
+                'field_errors' => $validation['errors'],
+                'code' => 422
+            ];
+        }
+
         $mode = $data['mode'] ?? 'progressive';
-        $phone = $data['phone'] ?? null;
+        $phone = $data['phone'];
         $campaignId = $data['campaign_id'] ?? null;
         $extension = $data['agent_extension'] ?? $currentUser['extension'];
         $callerId = $data['caller_id'] ?? null;
 
-        if (empty($phone)) {
-            return ['error' => 'Phone number is required', 'code' => 400];
-        }
-
-        // Create CDR record
         $callId = uniqid('call_');
         $this->db->insert('cdr', [
             'uuid' => $this->generateUUID(),
@@ -114,17 +133,27 @@ class PBXController {
             'start_time' => date('Y-m-d H:i:s')
         ]);
 
-        // Update agent status to on_call
         $this->db->query("
             UPDATE agent_status SET status = 'on_call', phone_number = ?, status_start_time = NOW()
             WHERE agent_id = ?
         ", [$phone, $currentUser['id']]);
 
-        // Call PBX API
         $pbxResponse = null;
         if ($this->pbx->isConfigured()) {
             $pbxResponse = $this->pbx->dial($mode, $phone, $extension, $callerId);
         }
+
+        AuditLogger::record($currentUser['id'], 'call.dial', 'cdr', $callId, [
+            'phone' => $phone,
+            'mode' => $mode,
+            'campaign_id' => $campaignId
+        ]);
+        EventLogger::record('call', $callId, 'call.dial_initiated', [
+            'agent_id' => $currentUser['id'],
+            'campaign_id' => $campaignId,
+            'phone' => $phone,
+            'mode' => $mode
+        ]);
 
         return ['data' => [
             'message' => 'Dial initiated',
@@ -136,15 +165,13 @@ class PBXController {
     public function hangup($currentUser) {
         $extension = $currentUser['extension'];
 
-        // Update agent status
         $this->db->query("
             UPDATE agent_status SET status = 'wrap_up', phone_number = NULL, status_start_time = NOW()
             WHERE agent_id = ?
         ", [$currentUser['id']]);
 
-        // Update CDR for current call
         $this->db->query("
-            UPDATE cdr SET 
+            UPDATE cdr SET
                 call_status = 'answered',
                 end_time = NOW(),
                 duration = TIMESTAMPDIFF(SECOND, start_time, NOW()),
@@ -153,7 +180,6 @@ class PBXController {
             ORDER BY start_time DESC LIMIT 1
         ", [$currentUser['id']]);
 
-        // Call PBX API
         $pbxResponse = null;
         if ($this->pbx->isConfigured()) {
             $pbxResponse = $this->pbx->hangup($extension);
@@ -168,13 +194,11 @@ class PBXController {
     public function transfer($targetExtension, $currentUser) {
         $extension = $currentUser['extension'];
 
-        // Call PBX API
         $pbxResponse = null;
         if ($this->pbx->isConfigured()) {
             $pbxResponse = $this->pbx->transfer($extension, $targetExtension);
         }
 
-        // Update agent status
         $this->db->query("
             UPDATE agent_status SET status = 'idle', phone_number = NULL
             WHERE agent_id = ?
@@ -186,11 +210,9 @@ class PBXController {
         ], 'code' => 200];
     }
 
-    // ==================== SUPERVISOR ACTIONS ====================
-
     public function barge($agentExtension, $currentUser) {
         if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'supervisor') {
-            return ['error' => 'Supervisor access required', 'code' => 403];
+            return ['error' => 'Supervisor access required', 'code' => 403, 'error_code' => 'FORBIDDEN'];
         }
 
         $pbxResponse = null;
@@ -206,7 +228,7 @@ class PBXController {
 
     public function whisper($agentExtension, $currentUser) {
         if ($currentUser['role'] !== 'admin' && $currentUser['role'] !== 'supervisor') {
-            return ['error' => 'Supervisor access required', 'code' => 403];
+            return ['error' => 'Supervisor access required', 'code' => 403, 'error_code' => 'FORBIDDEN'];
         }
 
         $pbxResponse = null;
@@ -222,7 +244,7 @@ class PBXController {
 
     public function getMeta() {
         if (!$this->pbx->isConfigured()) {
-            return ['error' => 'PBX not configured', 'code' => 400];
+            return ['error' => 'PBX not configured', 'code' => 400, 'error_code' => 'PBX_NOT_CONFIGURED'];
         }
 
         $response = $this->pbx->getMetaInit();
