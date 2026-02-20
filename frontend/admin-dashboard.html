@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chandra CRM - Admin Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #0f172a 0%,
+          #1e1b4b 50%,
+          #0f172a 100%
+        );
+        min-height: 100vh;
+        color: #fff;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 260px;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px 0;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+      }
+      .sidebar-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 20px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 20px;
+      }
+      .sidebar-logo .icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #06b6d4, #3b82f6);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sidebar-logo .icon i {
+        color: #fff;
+        font-size: 18px;
+      }
+      .sidebar-logo span {
+        font-weight: 700;
+        font-size: 18px;
+      }
+
+      .nav-menu {
+        list-style: none;
+        padding: 0 10px;
+      }
+      .nav-item {
+        margin-bottom: 5px;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 15px;
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+        border-radius: 10px;
+        transition: all 0.2s;
+        font-size: 14px;
+      }
+      .nav-link:hover,
+      .nav-link.active {
+        background: rgba(255, 255, 255, 0.05);
+        color: #06b6d4;
+      }
+      .nav-link.active {
+        background: rgba(6, 182, 212, 0.1);
+      }
+      .nav-link i {
+        width: 20px;
+        text-align: center;
+      }
+
+      .sidebar-footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #06b6d4, #3b82f6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+      }
+      .user-details {
+        flex: 1;
+      }
+      .user-name {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .user-role {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+        text-transform: capitalize;
+      }
+      .logout-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        transition: all 0.2s;
+      }
+      .logout-btn:hover {
+        color: #f87171;
+        background: rgba(239, 68, 68, 0.1);
+      }
+
+      /* Main Content */
+      .main-content {
+        flex: 1;
+        margin-left: 260px;
+        padding: 30px;
+      }
+
+      .page-header {
+        margin-bottom: 30px;
+      }
+      .page-header h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+      .page-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+      }
+
+      /* Stats Grid */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+      }
+      .stat-card {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        transition: all 0.3s;
+      }
+      .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .stat-card .label {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+      .stat-card .value {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .stat-card .icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        float: right;
+        margin-top: -5px;
+      }
+      .stat-card .icon i {
+        font-size: 20px;
+        color: #fff;
+      }
+
+      .bg-blue {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+      .bg-green {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+      .bg-yellow {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+      .bg-red {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+      .bg-purple {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .bg-cyan {
+        background: linear-gradient(135deg, #06b6d4, #0891b2);
+      }
+      .bg-pink {
+        background: linear-gradient(135deg, #ec4899, #db2777);
+      }
+      .bg-slate {
+        background: linear-gradient(135deg, #64748b, #475569);
+      }
+
+      /* Table */
+      .card {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        overflow: hidden;
+      }
+      .card-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .card-header h2 {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .refresh-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+      .refresh-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 14px 20px;
+        text-align: left;
+      }
+      th {
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      td {
+        font-size: 14px;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .status-idle {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+      }
+      .status-on_call {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+      }
+      .status-break {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+      }
+      .status-manual_on {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+      }
+      .status-wrap_up {
+        background: rgba(139, 92, 246, 0.2);
+        color: #a78bfa;
+      }
+      .status-offline {
+        background: rgba(100, 116, 139, 0.2);
+        color: #94a3b8;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 50px;
+        color: rgba(255, 255, 255, 0.4);
+      }
+      .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+      }
+
+      /* Loading */
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 50px;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(6, 182, 212, 0.2);
+        border-top-color: #06b6d4;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <div class="icon"><i class="fas fa-phone-volume"></i></div>
+          <span>Chandra CRM</span>
+        </div>
+
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a href="admin-dashboard.html" class="nav-link active">
+              <i class="fas fa-chart-line"></i> Live Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="campaigns.html" class="nav-link">
+              <i class="fas fa-bullhorn"></i> Campaigns
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="process-master.html" class="nav-link">
+              <i class="fas fa-cogs"></i> Process Master
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="contacts.html" class="nav-link">
+              <i class="fas fa-address-book"></i> Contacts
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="users.html" class="nav-link">
+              <i class="fas fa-users"></i> Users
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="cdr-reports.html" class="nav-link">
+              <i class="fas fa-file-alt"></i> CDR Reports
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="settings.html" class="nav-link">
+              <i class="fas fa-cog"></i> Settings
+            </a>
+          </li>
+          <li
+            class="nav-item"
+            style="
+              margin-top: 20px;
+              border-top: 1px solid rgba(255, 255, 255, 0.1);
+              padding-top: 20px;
+            "
+          >
+            <a href="agent-dashboard.html" class="nav-link">
+              <i class="fas fa-headset"></i> Agent Panel
+            </a>
+          </li>
+        </ul>
+
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+              <div class="user-name" id="userName">Admin</div>
+              <div class="user-role" id="userRole">admin</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="page-header">
+          <h1>Live Monitoring</h1>
+          <p>Real-time agent and call statistics</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card">
+            <div class="icon bg-blue"><i class="fas fa-users"></i></div>
+            <div class="label">Total Agents</div>
+            <div class="value" id="totalAgents">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-yellow"><i class="fas fa-coffee"></i></div>
+            <div class="label">On Break</div>
+            <div class="value" id="agentsBreak">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-slate"><i class="fas fa-clock"></i></div>
+            <div class="label">Idle</div>
+            <div class="value" id="agentsIdle">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-red"><i class="fas fa-phone"></i></div>
+            <div class="label">Manual On</div>
+            <div class="value" id="agentsManual">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-green"><i class="fas fa-phone-volume"></i></div>
+            <div class="label">On Call</div>
+            <div class="value" id="agentsOnCall">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-purple">
+              <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div class="label">Wrap Up</div>
+            <div class="value" id="agentsWrapUp">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-cyan"><i class="fas fa-phone-alt"></i></div>
+            <div class="label">Dialed Calls</div>
+            <div class="value" id="dialedCalls">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-green"><i class="fas fa-check-circle"></i></div>
+            <div class="label">Connected</div>
+            <div class="value" id="connectedCalls">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="icon bg-cyan"><i class="fas fa-percentage"></i></div>
+            <div class="label">Connectivity %</div>
+            <div class="value" id="connectivityPct">0%</div>
+          </div>
+        </div>
+
+        <!-- Agent Table -->
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-user-clock"></i> Agent Status</h2>
+            <button class="refresh-btn" onclick="loadData()">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+          <div id="agentTableContainer">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const API_URL = "/chandra_crm/php-backend/api.php";
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      function getUser() {
+        const user = localStorage.getItem("user");
+        return user ? JSON.parse(user) : null;
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "index.html";
+      }
+
+      function checkAuth() {
+        const token = getToken();
+        const user = getUser();
+        if (!token || !user) {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        // Update user info in sidebar
+        document.getElementById("userName").textContent = user.full_name;
+        document.getElementById("userRole").textContent = user.role;
+        document.getElementById("userAvatar").textContent =
+          user.full_name.charAt(0);
+        return true;
+      }
+
+      async function apiCall(endpoint, method = "GET", body = null) {
+        const options = {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + getToken(),
+          },
+        };
+
+        if (body) options.body = JSON.stringify(body);
+
+        const response = await fetch(API_URL + endpoint, options);
+
+        if (response.status === 401) {
+          logout();
+          return null;
+        }
+
+        return response.json();
+      }
+
+      async function loadStats() {
+        try {
+          const stats = await apiCall("/dashboard/stats");
+          if (stats) {
+            document.getElementById("totalAgents").textContent =
+              stats.total_agents || 0;
+            document.getElementById("agentsBreak").textContent =
+              stats.agents_on_break || 0;
+            document.getElementById("agentsIdle").textContent =
+              stats.agents_idle || 0;
+            document.getElementById("agentsManual").textContent =
+              stats.agents_manual_on || 0;
+            document.getElementById("agentsOnCall").textContent =
+              stats.agents_on_call || 0;
+            document.getElementById("agentsWrapUp").textContent =
+              stats.agents_wrap_up || 0;
+            document.getElementById("dialedCalls").textContent =
+              stats.dialed_calls || 0;
+            document.getElementById("connectedCalls").textContent =
+              stats.connected_calls || 0;
+            document.getElementById("connectivityPct").textContent =
+              (stats.connectivity_percentage || 0) + "%";
+          }
+        } catch (err) {
+          console.error("Error loading stats:", err);
+        }
+      }
+
+      async function loadAgents() {
+        const container = document.getElementById("agentTableContainer");
+        try {
+          const agents = await apiCall("/dashboard/agents");
+
+          if (!agents || agents.length === 0) {
+            container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-user-clock"></i>
+                            <p>No agents currently online</p>
+                        </div>
+                    `;
+            return;
+          }
+
+          let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Agent</th>
+                                <th>Extension</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Phone</th>
+                                <th>Campaign</th>
+                                <th>Break Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+          agents.forEach((agent, idx) => {
+            html += `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td><strong>${agent.agent_name}</strong></td>
+                            <td>${agent.extension || "-"}</td>
+                            <td><span class="status-badge status-${agent.status}">${agent.status.replace("_", " ")}</span></td>
+                            <td>${agent.current_duration || "00:00:00"}</td>
+                            <td>${agent.phone || "-"}</td>
+                            <td>${agent.campaign_name || "-"}</td>
+                            <td>${agent.break_type || "-"}</td>
+                        </tr>
+                    `;
+          });
+
+          html += "</tbody></table>";
+          container.innerHTML = html;
+        } catch (err) {
+          console.error("Error loading agents:", err);
+          container.innerHTML =
+            '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error loading agents</p></div>';
+        }
+      }
+
+      async function loadData() {
+        await Promise.all([loadStats(), loadAgents()]);
+      }
+
+      // Initialize
+      window.onload = function () {
+        if (checkAuth()) {
+          loadData();
+          // Auto refresh every 30 seconds
+          setInterval(loadData, 30000);
+        }
+      };
+    </script>
+  </body>
+</html>

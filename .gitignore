@@ -1,0 +1,4 @@
+/test_reports/
+/php-backend/config/database.php
+.env
+*.log
