@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Process Master - Chandra CRM</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<style>
+body{
+    font-family:'Inter',sans-serif;
+    margin:0;
+    background:linear-gradient(135deg,#0f172a,#1e1b4b);
+    color:#fff;
+}
+.layout{display:flex;}
+.sidebar{
+    width:250px;
+    background:rgba(15,23,42,0.9);
+    height:100vh;
+    padding:20px;
+}
+.sidebar a{
+    display:block;
+    color:#bbb;
+    padding:10px;
+    text-decoration:none;
+    border-radius:8px;
+}
+.sidebar a:hover{background:#06b6d4;color:#fff;}
+.main{
+    flex:1;
+    padding:30px;
+}
+.card{
+    background:rgba(255,255,255,0.05);
+    padding:20px;
+    border-radius:12px;
+}
+input,select{
+    width:100%;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:8px;
+    border:none;
+}
+button{
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+.btn-primary{background:#06b6d4;color:#fff;}
+.table{
+    width:100%;
+    margin-top:20px;
+    border-collapse:collapse;
+}
+.table th,.table td{
+    padding:10px;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+}
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+<div class="sidebar">
+<h2>Chandra CRM</h2>
+<a href="admin-dashboard.html">Dashboard</a>
+<a href="process-master.html" style="background:#06b6d4;color:#fff;">Process Master</a>
+<a href="campaigns.html">Campaigns</a>
+<a href="users.html">Users</a>
+<a href="dispositions.html">Dispositions</a>
+<a href="reports.html">Reports</a>
+<a href="settings.html">Settings</a>
+</div>
+
+<div class="main">
+
+<h1>Process Master</h1>
+
+<div class="card">
+<h3>Add Process</h3>
+
+<input type="text" id="processName" placeholder="Process Name">
+
+<select id="dialMode">
+<option value="default">Default</option>
+<option value="progressive">Progressive</option>
+<option value="predictive">Predictive</option>
+</select>
+
+<label>
+<input type="checkbox" id="manualDial"> Allow Manual Dial
+</label>
+
+<label>
+<input type="checkbox" id="agentDnc"> Agent Can Set DNC
+</label>
+
+<button class="btn-primary" onclick="saveProcess()">Save</button>
+</div>
+
+<table class="table" id="processTable">
+<thead>
+<tr>
+<th>Name</th>
+<th>Dial Mode</th>
+<th>Manual Dial</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+</div>
+
+<script>
+
+const API="/chandra_crm/php-backend";
+
+async function loadProcesses(){
+    const res=await fetch(API+"/process-master");
+    const data=await res.json();
+    const tbody=document.querySelector("#processTable tbody");
+    tbody.innerHTML="";
+    data.forEach(p=>{
+        tbody.innerHTML+=`
+        <tr>
+            <td>${p.name}</td>
+            <td>${p.dial_option}</td>
+            <td>${p.manual_dialing==1?"Yes":"No"}</td>
+            <td>
+                <button onclick="deleteProcess(${p.id})">Delete</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function saveProcess(){
+    const body={
+        name:document.getElementById("processName").value,
+        dial_option:document.getElementById("dialMode").value,
+        manual_dialing:document.getElementById("manualDial").checked?1:0,
+        agent_to_set_dnc:document.getElementById("agentDnc").checked?1:0
+    };
+    await fetch(API+"/process-master",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(body)
+    });
+    loadProcesses();
+}
+
+async function deleteProcess(id){
+    await fetch(API+"/process-master/"+id,{method:"DELETE"});
+    loadProcesses();
+}
+
+loadProcesses();
+
+</script>
+</body>
+</html>
+

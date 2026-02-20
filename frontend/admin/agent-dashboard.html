@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chandra CRM - Agent Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #0f172a 0%,
+          #1e1b4b 50%,
+          #0f172a 100%
+        );
+        min-height: 100vh;
+        color: #fff;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 260px;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px 0;
+        position: fixed;
+        height: 100vh;
+      }
+      .sidebar-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 20px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 20px;
+      }
+      .sidebar-logo .icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #06b6d4, #3b82f6);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sidebar-logo .icon i {
+        color: #fff;
+        font-size: 18px;
+      }
+      .sidebar-logo span {
+        font-weight: 700;
+        font-size: 18px;
+      }
+
+      .nav-menu {
+        list-style: none;
+        padding: 0 10px;
+      }
+      .nav-item {
+        margin-bottom: 5px;
+      }
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 15px;
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+        border-radius: 10px;
+        transition: all 0.2s;
+        font-size: 14px;
+      }
+      .nav-link:hover,
+      .nav-link.active {
+        background: rgba(255, 255, 255, 0.05);
+        color: #06b6d4;
+      }
+      .nav-link.active {
+        background: rgba(6, 182, 212, 0.1);
+      }
+      .nav-link i {
+        width: 20px;
+        text-align: center;
+      }
+
+      .sidebar-footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+      }
+      .user-details {
+        flex: 1;
+      }
+      .user-name {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .user-role {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+        text-transform: capitalize;
+      }
+      .logout-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+      }
+      .logout-btn:hover {
+        color: #f87171;
+        background: rgba(239, 68, 68, 0.1);
+      }
+
+      /* Main Content */
+      .main-content {
+        flex: 1;
+        margin-left: 260px;
+        padding: 30px;
+      }
+      .page-header {
+        margin-bottom: 30px;
+      }
+      .page-header h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+      .page-header p {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+      }
+
+      /* Dashboard Grid */
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+      }
+
+      /* Cards */
+      .card {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+      }
+      .card h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .card h3 i {
+        color: #06b6d4;
+      }
+
+      /* Status Controls */
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 25px;
+      }
+      .status-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 12px;
+      }
+      .status-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+      }
+      .status-btn.active {
+        background: #06b6d4;
+        color: #fff;
+        border-color: #06b6d4;
+      }
+      .status-btn.active.break {
+        background: #f59e0b;
+        border-color: #f59e0b;
+      }
+      .status-btn.active.manual {
+        background: #ef4444;
+        border-color: #ef4444;
+      }
+      .status-btn i {
+        font-size: 20px;
+      }
+
+      /* Call Status */
+      .call-status {
+        text-align: center;
+        padding: 30px;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .call-status.on-call {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.3);
+      }
+      .call-status .status-label {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+      .call-status .status-value {
+        font-size: 32px;
+        font-weight: 700;
+        font-family: monospace;
+      }
+      .call-status .status-duration {
+        font-size: 24px;
+        color: #10b981;
+        margin-top: 10px;
+        font-family: monospace;
+      }
+
+      /* Dialer */
+      .dialer-input {
+        position: relative;
+        margin-bottom: 15px;
+      }
+      .dialer-input i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.3);
+      }
+      .dialer-input input {
+        width: 100%;
+        padding: 15px 15px 15px 45px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 18px;
+        font-family: monospace;
+      }
+      .dialer-input input:focus {
+        outline: none;
+        border-color: rgba(6, 182, 212, 0.5);
+      }
+
+      .dial-pad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .dial-key {
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.02);
+        color: #fff;
+        font-size: 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .dial-key:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .dial-key small {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.4);
+        font-weight: 400;
+      }
+
+      .action-btns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .btn {
+        padding: 14px 20px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #06b6d4, #0891b2);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+      }
+      .btn-danger {
+        background: #ef4444;
+        color: #fff;
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Recent Calls */
+      .recent-calls {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .call-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .call-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .call-item .call-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: rgba(6, 182, 212, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+      }
+      .call-item .call-icon i {
+        color: #06b6d4;
+        font-size: 14px;
+      }
+      .call-item .call-number {
+        font-family: monospace;
+        flex: 1;
+      }
+      .call-item .call-time {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 12px;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 30px;
+        color: rgba(255, 255, 255, 0.4);
+      }
+      .empty-state i {
+        font-size: 36px;
+        margin-bottom: 10px;
+      }
+
+      /* Break Modal */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal.show {
+        display: flex;
+      }
+      .modal-content {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        width: 400px;
+        max-width: 90%;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .modal-header h3 {
+        font-size: 18px;
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        font-size: 20px;
+      }
+      .break-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .break-option {
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+      }
+      .break-option:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .break-option .name {
+        font-weight: 500;
+        margin-bottom: 5px;
+      }
+      .break-option .duration {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <div class="icon"><i class="fas fa-phone-volume"></i></div>
+          <span>Chandra CRM</span>
+        </div>
+
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a href="agent-dashboard.html" class="nav-link active">
+              <i class="fas fa-headset"></i> My Dashboard
+            </a>
+          </li>
+          <li class="nav-item" id="adminNav" style="display: none">
+            <a href="admin-dashboard.html" class="nav-link">
+              <i class="fas fa-chart-line"></i> Admin Panel
+            </a>
+          </li>
+        </ul>
+
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+              <div class="user-name" id="userName">Agent</div>
+              <div class="user-role" id="userRole">agent</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="page-header">
+          <h1>Agent Dashboard</h1>
+          <p>
+            Extension: <span id="agentExtension">-</span> | Status:
+            <span id="currentStatus" style="color: #06b6d4">Ready</span>
+          </p>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Status Controls -->
+          <div class="card">
+            <h3><i class="fas fa-toggle-on"></i> Status Controls</h3>
+
+            <div class="status-grid">
+              <button
+                class="status-btn active"
+                id="btnReady"
+                onclick="setStatus('ready')"
+              >
+                <i class="fas fa-play"></i>
+                Ready
+              </button>
+              <button
+                class="status-btn"
+                id="btnBreak"
+                onclick="showBreakModal()"
+              >
+                <i class="fas fa-coffee"></i>
+                Break
+              </button>
+              <button
+                class="status-btn"
+                id="btnManual"
+                onclick="setStatus('manual_on')"
+              >
+                <i class="fas fa-phone"></i>
+                Manual On
+              </button>
+            </div>
+
+            <div class="call-status" id="callStatus">
+              <div class="status-label">Current Status</div>
+              <div class="status-value" id="statusDisplay">READY</div>
+            </div>
+          </div>
+
+          <!-- Dialer -->
+          <div class="card">
+            <h3><i class="fas fa-phone-alt"></i> Dialer</h3>
+
+            <div class="dialer-input">
+              <i class="fas fa-phone"></i>
+              <input
+                type="tel"
+                id="phoneInput"
+                placeholder="Enter phone number"
+              />
+            </div>
+
+            <div class="dial-pad" id="dialPad">
+              <button class="dial-key" onclick="dialKey('1')">1</button>
+              <button class="dial-key" onclick="dialKey('2')">
+                2<small>ABC</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('3')">
+                3<small>DEF</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('4')">
+                4<small>GHI</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('5')">
+                5<small>JKL</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('6')">
+                6<small>MNO</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('7')">
+                7<small>PQRS</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('8')">
+                8<small>TUV</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('9')">
+                9<small>WXYZ</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('*')">*</button>
+              <button class="dial-key" onclick="dialKey('0')">
+                0<small>+</small>
+              </button>
+              <button class="dial-key" onclick="dialKey('#')">#</button>
+            </div>
+
+            <div class="action-btns">
+              <button class="btn btn-primary" id="btnDial" onclick="dial()">
+                <i class="fas fa-phone"></i> Dial
+              </button>
+              <button
+                class="btn btn-danger"
+                id="btnHangup"
+                onclick="hangup()"
+                disabled
+              >
+                <i class="fas fa-phone-slash"></i> Hangup
+              </button>
+            </div>
+          </div>
+
+          <!-- Recent Calls -->
+          <div class="card">
+            <h3><i class="fas fa-history"></i> Recent Calls</h3>
+
+            <div class="recent-calls" id="recentCalls">
+              <div class="empty-state">
+                <i class="fas fa-phone-slash"></i>
+                <p>No recent calls</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Break Modal -->
+    <div class="modal" id="breakModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Select Break Type</h3>
+          <button class="modal-close" onclick="closeBreakModal()">
+            &times;
+          </button>
+        </div>
+        <div class="break-options" id="breakOptions">
+          <button class="break-option" onclick="setBreak('LUNCH')">
+            <div class="name">Lunch Break</div>
+            <div class="duration">30 min max</div>
+          </button>
+          <button class="break-option" onclick="setBreak('TEA')">
+            <div class="name">Tea Break</div>
+            <div class="duration">15 min max</div>
+          </button>
+          <button class="break-option" onclick="setBreak('BIO')">
+            <div class="name">Bio Break</div>
+            <div class="duration">5 min max</div>
+          </button>
+          <button class="break-option" onclick="setBreak('PERSONAL')">
+            <div class="name">Personal</div>
+            <div class="duration">10 min max</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "/chandra_crm/php-backend";
+      let currentStatus = "ready";
+      let callTimer = null;
+      let callSeconds = 0;
+      let recentCalls = [];
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+      function getUser() {
+        const user = localStorage.getItem("user");
+        return user ? JSON.parse(user) : null;
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "index.html";
+      }
+
+      function checkAuth() {
+        const token = getToken();
+        const user = getUser();
+        if (!token || !user) {
+          window.location.href = "index.html";
+          return false;
+        }
+
+        document.getElementById("userName").textContent = user.full_name;
+        document.getElementById("userRole").textContent = user.role;
+        document.getElementById("userAvatar").textContent =
+          user.full_name.charAt(0);
+        document.getElementById("agentExtension").textContent =
+          user.extension || "Not assigned";
+
+        if (user.role === "admin") {
+          document.getElementById("adminNav").style.display = "block";
+        }
+        return true;
+      }
+
+      async function apiCall(endpoint, method = "GET", body = null) {
+        const options = {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + getToken(),
+          },
+        };
+        if (body) options.body = JSON.stringify(body);
+
+        try {
+          const response = await fetch(API_URL + endpoint, options);
+          if (response.status === 401) {
+            logout();
+            return null;
+          }
+          return response.json();
+        } catch (err) {
+          console.error("API Error:", err);
+          return null;
+        }
+      }
+
+      function updateStatusUI(status) {
+        currentStatus = status;
+        document.getElementById("currentStatus").textContent = status
+          .replace("_", " ")
+          .toUpperCase();
+        document.getElementById("statusDisplay").textContent = status
+          .replace("_", " ")
+          .toUpperCase();
+
+        // Update buttons
+        document
+          .querySelectorAll(".status-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+
+        const callStatusEl = document.getElementById("callStatus");
+        callStatusEl.classList.remove("on-call");
+
+        if (status === "ready" || status === "idle") {
+          document.getElementById("btnReady").classList.add("active");
+        } else if (status === "break") {
+          document.getElementById("btnBreak").classList.add("active", "break");
+        } else if (status === "manual_on") {
+          document
+            .getElementById("btnManual")
+            .classList.add("active", "manual");
+        } else if (status === "on_call") {
+          callStatusEl.classList.add("on-call");
+        }
+      }
+
+      async function setStatus(status) {
+        const user = getUser();
+        const result = await apiCall("/pbx/agent/status", "POST", {
+          action: status,
+          extension: user.extension || "100",
+        });
+
+        if (result) {
+          updateStatusUI(status);
+        }
+      }
+
+      function showBreakModal() {
+        document.getElementById("breakModal").classList.add("show");
+      }
+
+      function closeBreakModal() {
+        document.getElementById("breakModal").classList.remove("show");
+      }
+
+      async function setBreak(breakType) {
+        const user = getUser();
+        const result = await apiCall("/pbx/agent/status", "POST", {
+          action: "break",
+          extension: user.extension || "100",
+          break_type: breakType,
+        });
+
+        if (result) {
+          updateStatusUI("break");
+          closeBreakModal();
+        }
+      }
+
+      function dialKey(key) {
+        const input = document.getElementById("phoneInput");
+        input.value += key;
+      }
+
+      async function dial() {
+        const phone = document.getElementById("phoneInput").value;
+        if (!phone) {
+          alert("Please enter a phone number");
+          return;
+        }
+
+        const user = getUser();
+        const result = await apiCall("/pbx/dial", "POST", {
+          mode: "progressive",
+          phone: phone,
+          agent_extension: user.extension,
+        });
+
+        if (result) {
+          updateStatusUI("on_call");
+          document.getElementById("btnDial").disabled = true;
+          document.getElementById("btnHangup").disabled = false;
+
+          // Add to recent calls
+          recentCalls.unshift({ phone, time: new Date().toLocaleTimeString() });
+          updateRecentCalls();
+
+          // Start timer
+          startCallTimer();
+        }
+      }
+
+      async function hangup() {
+        const result = await apiCall("/pbx/hangup", "POST");
+
+        if (result) {
+          updateStatusUI("wrap_up");
+          document.getElementById("btnDial").disabled = false;
+          document.getElementById("btnHangup").disabled = true;
+          stopCallTimer();
+
+          // Auto go ready after wrap up
+          setTimeout(() => {
+            setStatus("ready");
+          }, 3000);
+        }
+      }
+
+      function startCallTimer() {
+        callSeconds = 0;
+        callTimer = setInterval(() => {
+          callSeconds++;
+          const hrs = Math.floor(callSeconds / 3600);
+          const mins = Math.floor((callSeconds % 3600) / 60);
+          const secs = callSeconds % 60;
+          const timeStr = `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+
+          const statusEl = document.getElementById("callStatus");
+          if (!statusEl.querySelector(".status-duration")) {
+            statusEl.innerHTML += '<div class="status-duration">00:00:00</div>';
+          }
+          statusEl.querySelector(".status-duration").textContent = timeStr;
+        }, 1000);
+      }
+
+      function stopCallTimer() {
+        if (callTimer) {
+          clearInterval(callTimer);
+          callTimer = null;
+        }
+      }
+
+      function updateRecentCalls() {
+        const container = document.getElementById("recentCalls");
+
+        if (recentCalls.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state"><i class="fas fa-phone-slash"></i><p>No recent calls</p></div>';
+          return;
+        }
+
+        container.innerHTML = recentCalls
+          .slice(0, 10)
+          .map(
+            (call) => `
+                <div class="call-item" onclick="document.getElementById('phoneInput').value='${call.phone}'">
+                    <div class="call-icon"><i class="fas fa-phone"></i></div>
+                    <div class="call-number">${call.phone}</div>
+                    <div class="call-time">${call.time}</div>
+                </div>
+            `,
+          )
+          .join("");
+      }
+
+      async function loadBreakTypes() {
+        const result = await apiCall("/break-types");
+        if (result && result.length > 0) {
+          const container = document.getElementById("breakOptions");
+          container.innerHTML = result
+            .map(
+              (bt) => `
+                    <button class="break-option" onclick="setBreak('${bt.code}')">
+                        <div class="name">${bt.name}</div>
+                        <div class="duration">${bt.max_duration} min max</div>
+                    </button>
+                `,
+            )
+            .join("");
+        }
+      }
+
+      // Initialize
+      window.onload = function () {
+        if (checkAuth()) {
+          loadBreakTypes();
+        }
+      };
+    </script>
+  </body>
+</html>
