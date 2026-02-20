@@ -24,7 +24,8 @@ $agentId = $_SESSION['user_id'];
         <div class="left">
             <span>Agent Console</span>
         </div>
-
+<select id="campaignSelect"></select>
+<button onclick="joinCampaign()">Join Campaign</button>
         <div class="center">
             <span id="statusBadge" class="badge offline">OFFLINE</span>
             <span id="callTimer">00:00</span>

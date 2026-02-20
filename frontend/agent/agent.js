@@ -81,7 +81,15 @@ function saveDisposition() {
     setTimeout(() => setStatus("ready"), 10000);
   });
 }
-
+function joinCampaign() {
+  fetch("../../php-backend/controllers/AgentCampaignController.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      campaign_id: document.getElementById("campaignSelect").value,
+    }),
+  });
+}
 function loadCustomer(phone) {
   fetch("api/load-contact.php?phone=" + phone)
     .then((res) => res.json())

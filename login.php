@@ -1,314 +1,259 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
 
-if (user.role === "admin") {
-    window.location.href = "admin-dashboard.html";
-} else {
-    window.location.href = "agent-dashboard.html";
-}
+/* ========= CONFIG ========= */
+define("API_BASE_URL", "http://localhost/chandra_crm/php-backend");
+
+/* ========= AUTO REDIRECT ========= */
+if (isset($_SESSION['user_id'])) {
+    header("Location: frontend/" . $_SESSION['role'] . "/dashboard.php");
     exit;
+}
 
 $error = "";
 $selectedRole = "agent";
 
+/* ========= LOGIN PROCESS ========= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $selectedRole = $_POST['login_role'];
+    $selectedRole = $_POST['login_role'] ?? 'agent';
 
-    $data = json_encode([
-        "username" => $_POST['username'],
+    $payload = json_encode([
+        "username" => trim($_POST['username']),
         "password" => $_POST['password']
     ]);
 
-    $ch = curl_init("http://localhost/chandra_crm/php-backend/auth/login");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    $ch = curl_init(API_BASE_URL . "/auth/login");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 10
+    ]);
 
     $response = curl_exec($ch);
+
+    if (curl_errno($ch)) {
+        $error = "Authentication service unavailable.";
+    }
+
     curl_close($ch);
 
     $result = json_decode($response, true);
 
-    if (isset($result['access_token'])) {
+    if (!$result || !isset($result['access_token'], $result['user'])) {
+        $error = "Invalid username or password.";
+    } else {
 
-        // Role verification
         if ($result['user']['role'] !== $selectedRole) {
-            $error = "You are not allowed to login as " . ucfirst($selectedRole);
+            $error = "Unauthorized role selected.";
         } else {
 
-            $_SESSION['user']  = $result['user']['username'];
-            $_SESSION['token'] = $result['access_token'];
-            $_SESSION['role']  = $result['user']['role'];
+            session_regenerate_id(true);
 
-            header("Location: " . $_SESSION['role'] . "/dashboard.php");
+            $_SESSION['user_id']  = $result['user']['id'];
+            $_SESSION['username'] = $result['user']['username'];
+            $_SESSION['role']     = $result['user']['role'];
+            $_SESSION['token']    = $result['access_token'];
+
+            header("Location: frontend/" . $_SESSION['role'] . "/dashboard.php");
             exit;
         }
-
-    } else {
-        $error = "Invalid Username or Password";
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
 <title>Chandra CRM - Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
 <style>
-body {
-    margin:0;
-    font-family:'Inter',sans-serif;
-    background: linear-gradient(135deg,#0f172a,#1e1b4b,#0f172a);
-    height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:'Inter',sans-serif;
+background:
+radial-gradient(circle at 20% 30%, rgba(6,182,212,0.25), transparent 40%),
+radial-gradient(circle at 80% 70%, rgba(139,92,246,0.25), transparent 40%),
+linear-gradient(135deg,#0f172a,#1e1b4b,#0f172a);
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+color:#fff;
+overflow:hidden;
 }
 
-.login-container{
-    width:100%;
-    max-width:420px;
+.login-wrapper{
+width:100%;
+max-width:430px;
+}
+
+.glass-card{
+background:rgba(15,23,42,0.65);
+backdrop-filter:blur(30px);
+border-radius:28px;
+padding:45px 35px;
+border:1px solid rgba(255,255,255,0.08);
+box-shadow:
+0 25px 60px rgba(0,0,0,0.6),
+inset 0 1px 0 rgba(255,255,255,0.08);
+position:relative;
+}
+
+.glass-card:before{
+content:"";
+position:absolute;
+top:-2px;
+left:-2px;
+right:-2px;
+bottom:-2px;
+border-radius:30px;
+background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+z-index:-1;
+filter:blur(25px);
+opacity:.4;
 }
 
 .logo{
-    text-align:center;
-    margin-bottom:30px;
-}
-
-.logo-icon{
-    width:80px;
-    height:80px;
-    background:rgba(6,182,212,0.15);
-    border-radius:20px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    margin:0 auto 15px;
-    border:1px solid rgba(255,255,255,0.1);
-}
-
-.logo-icon i{
-    font-size:34px;
-    color:#06b6d4;
+text-align:center;
+margin-bottom:30px;
 }
 
 .logo h1{
-    color:#fff;
-    margin:0;
+margin:0;
+font-weight:700;
+letter-spacing:.5px;
 }
 
-.logo p{
-    color:rgba(255,255,255,0.5);
-    font-size:14px;
+.role-toggle{
+display:flex;
+background:rgba(255,255,255,0.06);
+border-radius:40px;
+padding:5px;
+margin-bottom:25px;
+position:relative;
 }
 
-.login-card{
-    background:rgba(15,23,42,0.6);
-    backdrop-filter:blur(20px);
-    padding:30px;
-    border-radius:20px;
-    border:1px solid rgba(255,255,255,0.1);
-    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+.role-toggle button{
+flex:1;
+border:none;
+background:none;
+color:#aaa;
+padding:10px 0;
+border-radius:30px;
+cursor:pointer;
+font-weight:600;
+transition:.3s;
 }
 
-.role-tabs{
-    display:flex;
-    background:rgba(0,0,0,0.2);
-    padding:5px;
-    border-radius:30px;
-    margin-bottom:25px;
+.role-toggle .active{
+background:linear-gradient(135deg,#f97316,#fb923c);
+color:#fff;
+box-shadow:0 6px 20px rgba(249,115,22,.5);
 }
 
-.role-tab{
-    flex:1;
-    padding:10px;
-    border:none;
-    border-radius:25px;
-    background:transparent;
-    color:rgba(255,255,255,0.6);
-    cursor:pointer;
-    font-weight:600;
-    transition:0.3s;
+.input-group{
+margin-bottom:18px;
 }
 
-.role-tab.active{
-    background:linear-gradient(135deg,#06b6d4,#0891b2);
-    color:#fff;
-    box-shadow:0 4px 15px rgba(6,182,212,0.4);
+.input-group input{
+width:100%;
+padding:14px 18px;
+border-radius:16px;
+border:1px solid rgba(255,255,255,0.1);
+background:rgba(255,255,255,0.07);
+color:#fff;
+font-size:14px;
+transition:.3s;
 }
 
-.form-group{
-    margin-bottom:20px;
-}
-
-.form-group label{
-    color:rgba(255,255,255,0.7);
-    font-size:14px;
-}
-
-.input-wrapper{
-    position:relative;
-}
-
-.input-wrapper i{
-    position:absolute;
-    left:15px;
-    top:50%;
-    transform:translateY(-50%);
-    color:rgba(255,255,255,0.3);
-}
-
-* {
-    box-sizing: border-box;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 14px 16px 14px 45px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    color: #fff;
-    font-size: 14px;
-    transition: 0.3s ease;
-}
-
-.login-card {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(25px);
-    padding: 35px;
-    border-radius: 22px;
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-        0 20px 40px rgba(0,0,0,0.4),
-        inset 0 1px 0 rgba(255,255,255,0.05);
-}
-
-.form-group input:focus{
-    outline:none;
-    border-color:#06b6d4;
-    box-shadow:0 0 0 3px rgba(6,182,212,0.2);
+.input-group input:focus{
+outline:none;
+border-color:#06b6d4;
+box-shadow:0 0 0 3px rgba(6,182,212,.2);
 }
 
 .login-btn{
-    width:100%;
-    padding:14px;
-    background:linear-gradient(135deg,#06b6d4,#0891b2);
-    border:none;
-    border-radius:30px;
-    color:#fff;
-    font-weight:600;
-    cursor:pointer;
-    transition:0.3s;
+width:100%;
+padding:15px;
+border:none;
+border-radius:40px;
+background:linear-gradient(135deg,#06b6d4,#0891b2);
+color:#fff;
+font-weight:600;
+cursor:pointer;
+font-size:15px;
+transition:.3s;
+box-shadow:0 10px 30px rgba(6,182,212,.5);
 }
 
 .login-btn:hover{
-    transform:translateY(-2px);
+transform:translateY(-3px);
+box-shadow:0 15px 40px rgba(6,182,212,.7);
 }
 
-.links{
-    margin-top:15px;
-    text-align:center;
-}
-
-.links a{
-    color:#06b6d4;
-    font-size:13px;
-    text-decoration:none;
-    margin:0 10px;
-}
-
-.error-msg{
-    background:rgba(239,68,68,0.2);
-    border:1px solid rgba(239,68,68,0.3);
-    color:#f87171;
-    padding:10px;
-    border-radius:10px;
-    margin-bottom:15px;
-}
-.footer{
-    text-align:center;
-    margin-top:20px;
-    color:rgba(255,255,255,0.3);
-    font-size:12px;
+.error{
+background:rgba(239,68,68,.15);
+border:1px solid rgba(239,68,68,.3);
+padding:10px;
+border-radius:12px;
+margin-bottom:15px;
+color:#f87171;
+text-align:center;
 }
 </style>
 
 <script>
 function setRole(role){
-    document.getElementById("login_role").value = role;
-    document.getElementById("agentTab").classList.remove("active");
-    document.getElementById("adminTab").classList.remove("active");
-    document.getElementById(role+"Tab").classList.add("active");
+document.getElementById("login_role").value=role;
+document.getElementById("agentBtn").classList.remove("active");
+document.getElementById("adminBtn").classList.remove("active");
+document.getElementById(role+"Btn").classList.add("active");
 }
 </script>
-</head>
 
+</head>
 <body>
 
-<div class="login-container">
+<div class="login-wrapper">
+<div class="glass-card">
 
 <div class="logo">
-    <div class="logo-icon">
-        <i class="fas fa-phone-volume"></i>
-    </div>
-    <h1>Chandra CRM</h1>
-    <p>Contact Center Solution</p>
+<h1>Chandra CRM</h1>
 </div>
 
-<div class="login-card">
-
 <?php if($error): ?>
-<div class="error-msg"><?php echo $error; ?></div>
+<div class="error"><?php echo $error; ?></div>
 <?php endif; ?>
 
 <form method="POST">
 
-<div class="role-tabs">
-    <button type="button" id="agentTab" class="role-tab <?php if($selectedRole=='agent') echo 'active'; ?>" onclick="setRole('agent')">Agent</button>
-    <button type="button" id="adminTab" class="role-tab <?php if($selectedRole=='admin') echo 'active'; ?>" onclick="setRole('admin')">Admin</button>
+<div class="role-toggle">
+<button type="button" id="agentBtn" class="<?php echo $selectedRole=='agent'?'active':'';?>" onclick="setRole('agent')">Agent</button>
+<button type="button" id="adminBtn" class="<?php echo $selectedRole=='admin'?'active':'';?>" onclick="setRole('admin')">Admin</button>
 </div>
 
-<input type="hidden" name="login_role" id="login_role" value="<?php echo $selectedRole; ?>">
+<input type="hidden" name="login_role" id="login_role" value="<?php echo $selectedRole;?>">
 
-<div class="form-group">
-<label>Username *</label>
-<div class="input-wrapper">
-<i class="fas fa-user"></i>
-<input type="text" name="username" required>
-</div>
+<div class="input-group">
+<input type="text" name="username" placeholder="Username" required>
 </div>
 
-<div class="form-group">
-<label>Password *</label>
-<div class="input-wrapper">
-<i class="fas fa-lock"></i>
-<input type="password" name="password" required>
-</div>
+<div class="input-group">
+<input type="password" name="password" placeholder="Password" required>
 </div>
 
-<button class="login-btn">
-<i class="fas fa-sign-in-alt"></i> Login
-</button>
-
-<div class="links">
-<a href="#">Forgot Password?</a> |
-<a href="#">Help Me</a>
-</div>
+<button class="login-btn">Login</button>
 
 </form>
 
 </div>
-
-<div class="footer">
-Chandra CRM v1.0
-</div>
-
 </div>
 
 </body>
